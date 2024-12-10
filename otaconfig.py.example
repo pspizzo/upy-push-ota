@@ -1,0 +1,29 @@
+
+# Optional name of this system
+name = 'otadev'
+
+# Required Wifi settings
+wifi_ssid = ''
+wifi_passphrase = ''
+
+# Hex string, 128 or 256 bits
+crypto_key = ''
+
+# How often should OTA check for incoming connections?
+loop_period_secs = 3
+
+# How often should the run.py loop execute?
+run_period_secs = 2
+
+# Socket timeout for a client connection (seconds)
+client_socket_timeout = 10
+
+# Use second core for OTA loop, so your run.py code can run on the main core.
+# Possible on Raspberry Pi Pico W, which has two cores.
+# Your run.py also needs a main() method. If no main() method is defined,
+# this option is ignored.
+multithread = True
+
+#network_log_host = '192.168.1.1'
+#network_log_port = 6699
+#log_level = 10
