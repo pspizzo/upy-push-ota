@@ -14,7 +14,7 @@ import tarfile
 import cryptolib
 import _thread # multicore support on RPi Pico
 
-OTA_VERSION = '0.0.1'
+OTA_VERSION = '0.0.2'
 
 # Used to randomly generate a temporary filename when uploading an OTA update
 ascii_letters = list(map(chr, range(ord('a'), ord('z') + 1))) + list(map(chr, range(ord('0'), ord('9') + 1)))
@@ -48,18 +48,16 @@ if hasattr(otaconfig, 'crypto_key') and otaconfig.crypto_key:
         sys.exit(1)
 
 
-# Convert string to long, ignoring errors
-def safe_long(val, default_val = None, log_prefix = None):
+# Convert string to int, ignoring errors
+def safe_int(val, default_val = None, log_prefix = None):
     try:
-        return long(val)
+        if isinstance(val, (int)):
+            return val
+        return int(val)
     except Exception:
         if log_prefix:
             print(f'{log_prefix}: {val}')
         return default_val
-
-# Convert string to int, ignoring errors
-def safe_int(val, default_val = None, log_prefix = None):
-    return int(safe_long(val, default_val, log_prefix))
 
 
 # Logger, includes network logging
@@ -69,13 +67,13 @@ log_to_network_port = None
 if hasattr(otaconfig, 'network_log_host'):
     log_to_network_host = otaconfig.network_log_host
 if hasattr(otaconfig, 'network_log_port'):
-    log_to_network_port = safe_int(otaconfig.network_log_port, log_prefix='Invalid network_log_port')
+    log_to_network_port = safe_int(otaconfig.network_log_port, 0, log_prefix='Invalid network_log_port')
 if log_to_network_host and log_to_network_port:
     print(f'Network logging enabled to {log_to_network_host}:{log_to_network_port}')
 
 log_level = 20
 if hasattr(otaconfig, 'log_level'):
-    log_level = safe_int(otaconfig.log_level, 'Invalid log_level in otaconfig')
+    log_level = safe_int(otaconfig.log_level, 20, 'Invalid log_level in otaconfig')
 
 log_sock = None
 def log_all(level, message):
@@ -280,9 +278,10 @@ def compare_signature(enc_sig, expected_content):
     sig_bytes = binascii.a2b_base64(enc_sig) # base64-decode
     aes_ecb = cryptolib.aes(crypto_key, 1) # MODE_ECB
     decoded_sig = aes_ecb.decrypt(sig_bytes).decode()
-    if decoded_sig and len(decoded_sig) > 0 and ord(decoded_sig[-1]) < 32:
-        # Strip non-ASCII padding characters from the end
-        decoded_sig = decoded_sig.rstrip(decoded_sig[-1])
+    for i in range(0, 3):
+        if decoded_sig and len(decoded_sig) > 0 and ord(decoded_sig[-1]) < 32:
+            # Strip non-ASCII padding characters from the end
+            decoded_sig = decoded_sig.rstrip(decoded_sig[-1])
     if decoded_sig != expected_content:
         log_debug(f'Decoded sig: {decoded_sig} {ord(decoded_sig[-1])}')
         return False
@@ -350,6 +349,7 @@ def authenticate(handler, content=False):
         if not compare_signature(rcvd_sig, f'{rcvd_hash}.{content_length}'):
             handler.send_text(401, 'FORBIDDEN', 'Invalid signature')
             return False
+        return True
     except Exception as e:
         sys.print_exception(e)
         handler.send_text(500, 'INTERNAL SERVER ERROR', 'Failed to calculate signature')

@@ -19,7 +19,8 @@ if [ "$OTA_KEY" = "" ] ; then
 fi
 
 OTA_SIG=`echo -n "${REQ_METHOD}.${2}" | openssl enc -aes-256-ecb -K "$OTA_KEY" -e | base64 -w 0`
-echo "Sig:  $OTA_SIG"
+echo "Sig data:  ${REQ_METHOD}.${2}"
+echo "Sig hash:  $OTA_SIG"
 
 curl -X $REQ_METHOD \
   -H "OTA-Sig: $OTA_SIG" \
